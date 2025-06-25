@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブラウザシューティングゲーム</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 全体のスタイル */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #2c3e50; /* 暗い背景 */
+            font-family: 'Inter', sans-serif; /* Interフォントを使用 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #ecf0f1;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ゲームコンテナ */
+        .game-container {
+            position: relative;
+            background-color: #34495e; /* ゲームエリアの背景 */
+            border: 5px solid #2980b9; /* 青い枠線 */
+            border-radius: 15px; /* 角を丸くする */
+            box-shadow: 0 0 25px rgba(0, 162, 255, 0.7); /* 青い光る影 */
+            overflow: hidden; /* 要素がはみ出さないように */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* キャンバス */
+        canvas {
+            background-color: #1a242f; /* キャンバスの背景 */
+            display: block; /* 余白をなくす */
+            border-radius: 10px; /* キャンバスの角も丸くする */
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5); /* 内側に影 */
+        }
+
+        /* UIパネル */
+        .ui-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 600px; /* キャンバスの幅に合わせる */
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: #ecf0f1;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        /* メッセージボックス */
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ecf0f1;
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            box-shadow: 0 0 30px rgba(0, 162, 255, 0.9);
+            z-index: 100;
+            display: none; /* 初期状態では非表示 */
+            border: 3px solid #00aaff;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .message-box button {
+            margin-top: 25px;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(145deg, #2ecc71, #27ae60); /* 緑色のグラデーション */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .message-box button:hover {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .message-box button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* アニメーション */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* ボタンコンテナ */
+        .button-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .action-button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            background: linear-gradient(145deg, #e74c3c, #c0392b); /* 赤色のグラデーション */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .action-button:hover {
+            background: linear-gradient(145deg, #c0392b, #e74c3c);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-button.start {
+             background: linear-gradient(145deg, #3498db, #2980b9); /* 青色のグラデーション */
+        }
+        .action-button.start:hover {
+             background: linear-gradient(145deg, #2980b9, #3498db);
+        }
+
+        .action-button.restart {
+            background: linear-gradient(145deg, #f1c40f, #f39c12); /* 黄色のグラデーション */
+        }
+        .action-button.restart:hover {
+            background: linear-gradient(145deg, #f39c12, #f1c40f);
+        }
+
+        /* ヘルスバー */
+        .health-bar-container {
+            width: 150px;
+            height: 20px;
+            background-color: #555;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #777;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .health-bar {
+            height: 100%;
+            width: 100%; /* 初期は最大 */
+            background: linear-gradient(to right, #e74c3c, #c0392b); /* 赤から濃い赤へ */
+            transition: width 0.3s ease-out;
+            border-radius: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="ui-panel">
+            <span>スコア: <span id="score">0</span></span>
+            <div class="health-bar-container">
+                <div id="health-bar" class="health-bar"></div>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="message-box" id="messageBox">
+        <h2 id="messageTitle">ゲームスタート</h2>
+        <p id="messageText">「スタート」ボタンを押してゲームを開始してください。</p>
+        <button id="messageButton">スタート</button>
+    </div>
+
+    <script>
+        // グローバル変数
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const healthBar = document.getElementById('health-bar');
+        const messageBox = document.getElementById('messageBox');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const messageButton = document.getElementById('messageButton');
+
+        // ゲーム設定
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        const PLAYER_SPEED = 5;
+        const BULLET_SPEED = 10;
+        const ENEMY_SPEED = 2;
+        const ENEMY_SPAWN_INTERVAL = 1000; // ミリ秒
+        const MAX_PLAYER_HEALTH = 100;
+
+        let player;
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let lastEnemySpawnTime = 0;
+        let gameRunning = false;
+        let animationFrameId;
+
+        // キーボード入力の状態
+        const keys = {
+            ArrowLeft: false,
+            ArrowRight: false,
+            Space: false
+        };
+
+        // メッセージボックスを表示する関数
+        function showMessageBox(title, text, buttonText, buttonAction) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            messageButton.textContent = buttonText;
+            messageButton.onclick = buttonAction;
+            messageBox.style.display = 'block';
+        }
+
+        // メッセージボックスを非表示にする関数
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // プレイヤーオブジェクト
+        class Player {
+            constructor() {
+                this.width = 50;
+                this.height = 30;
+                this.x = (GAME_WIDTH - this.width) / 2;
+                this.y = GAME_HEIGHT - this.height - 10;
+                this.health = MAX_PLAYER_HEALTH;
+                this.color = '#3498db'; // 青
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+
+                // コックピットの窓
+                ctx.fillStyle = '#ecf0f1'; // 白っぽい色
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                if (keys.ArrowLeft && this.x > 0) {
+                    this.x -= PLAYER_SPEED;
+                }
+                if (keys.ArrowRight && this.x < GAME_WIDTH - this.width) {
+                    this.x += PLAYER_SPEED;
+                }
+            }
+
+            takeDamage(amount) {
+                this.health -= amount;
+                if (this.health < 0) {
+                    this.health = 0;
+                }
+                updateHealthBar();
+            }
+        }
+
+        // 弾丸オブジェクト
+        class Bullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 5;
+                this.height = 15;
+                this.color = '#f1c40f'; // 黄色
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+
+            update() {
+                this.y -= BULLET_SPEED;
+            }
+        }
+
+        // 敵オブジェクト
+        class Enemy {
+            constructor() {
+                this.width = 40;
+                this.height = 40;
+                this.x = Math.random() * (GAME_WIDTH - this.width);
+                this.y = -this.height; // 画面外から出現
+                this.color = '#e74c3c'; // 赤
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 目
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width * 0.3, this.y + this.height * 0.4, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + this.width * 0.7, this.y + this.height * 0.4, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.y += ENEMY_SPEED;
+            }
+        }
+
+        // ゲームの初期化
+        function initializeGame() {
+            player = new Player();
+            bullets = [];
+            enemies = [];
+            score = 0;
+            updateScore();
+            player.health = MAX_PLAYER_HEALTH;
+            updateHealthBar();
+            lastEnemySpawnTime = 0;
+            gameRunning = false;
+            // キャンバスのサイズを設定
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+        }
+
+        // スコアを更新
+        function updateScore() {
+            scoreDisplay.textContent = score;
+        }
+
+        // ヘルスバーを更新
+        function updateHealthBar() {
+            healthBar.style.width = `${player.health}%`;
+            if (player.health > 70) {
+                healthBar.style.background = 'linear-gradient(to right, #2ecc71, #27ae60)'; // 緑
+            } else if (player.health > 30) {
+                healthBar.style.background = 'linear-gradient(to right, #f1c40f, #f39c12)'; // 黄色
+            } else {
+                healthBar.style.background = 'linear-gradient(to right, #e74c3c, #c0392b)'; // 赤
+            }
+        }
+
+        // 衝突判定
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+
+        // ゲームループ
+        function gameLoop(currentTime) {
+            if (!gameRunning) {
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT); // キャンバスをクリア
+
+            // プレイヤーの更新と描画
+            player.update();
+            player.draw();
+
+            // 敵の生成
+            if (currentTime - lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
+                enemies.push(new Enemy());
+                lastEnemySpawnTime = currentTime;
+            }
+
+            // 弾丸の更新と描画
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.update();
+                bullet.draw();
+
+                // 画面外に出た弾丸を削除
+                if (bullet.y < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // 敵の更新と描画
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.update();
+                enemy.draw();
+
+                // 画面外に出た敵、またはプレイヤーと衝突した敵
+                if (enemy.y > GAME_HEIGHT) {
+                    // 敵が画面下部に到達したらプレイヤーにダメージ
+                    player.takeDamage(10); // ダメージ量
+                    enemies.splice(i, 1);
+                } else if (checkCollision(player, enemy)) {
+                    // プレイヤーと敵の衝突
+                    player.takeDamage(25); // 大きなダメージ
+                    enemies.splice(i, 1);
+                }
+
+                // 敵と弾丸の衝突判定
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
+                    if (checkCollision(enemy, bullet)) {
+                        // 衝突したら敵と弾丸を削除
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        score += 10; // スコア加算
+                        updateScore();
+                        break; // この敵に当たった弾丸はもう処理しない
+                    }
+                }
+            }
+
+            // ゲームオーバー判定
+            if (player.health <= 0) {
+                gameRunning = false;
+                showMessageBox('ゲームオーバー', `あなたのスコア: ${score}`, 'リスタート', restartGame);
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // ゲーム開始
+        function startGame() {
+            hideMessageBox();
+            initializeGame();
+            gameRunning = true;
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // ゲームリスタート
+        function restartGame() {
+            startGame(); // 初期化して再度ゲームを開始
+        }
+
+        // キーイベントリスナー
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.code === 'ArrowRight') keys.ArrowRight = true;
+            if (e.code === 'Space' && !keys.Space) { // スペースキーは1回押すと1発
+                keys.Space = true;
+                if (gameRunning) {
+                    bullets.push(new Bullet(player.x + player.width / 2 - 2.5, player.y));
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.code === 'ArrowRight') keys.ArrowRight = false;
+            if (e.code === 'Space') keys.Space = false;
+        });
+
+        // タッチイベントリスナー (モバイル対応)
+        let touchStartX = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameRunning && e.touches.length > 0) {
+                const currentTouchX = e.touches[0].clientX;
+                const deltaX = currentTouchX - touchStartX;
+
+                // 画面の幅に対する移動量の比率でプレイヤーを移動
+                const sensitivity = 0.5; // タッチ感度
+                player.x += deltaX * sensitivity;
+
+                // 画面端での制限
+                if (player.x < 0) player.x = 0;
+                if (player.x > GAME_WIDTH - player.width) player.x = GAME_WIDTH - player.width;
+
+                touchStartX = currentTouchX; // 現在の位置を次の移動の開始点にする
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            // タップで発射
+            if (gameRunning) {
+                bullets.push(new Bullet(player.x + player.width / 2 - 2.5, player.y));
+            }
+        });
+
+
+        // ウィンドウがロードされたらゲームを初期化し、開始メッセージを表示
+        window.onload = function() {
+            initializeGame();
+            showMessageBox('シューティングゲーム', '「スタート」ボタンを押してゲームを開始してください。<br>矢印キーで移動、スペースキーで発射します。<br>モバイルではタッチで移動と発射ができます。', 'スタート', startGame);
+        };
+
+        // ウィンドウのリサイズ時にキャンバスをリサイズ
+        window.addEventListener('resize', () => {
+            // ゲームの論理サイズは固定だが、表示サイズを調整することでレスポンシブに対応
+            const gameContainer = document.querySelector('.game-container');
+            const aspectRatio = GAME_WIDTH / GAME_HEIGHT;
+            let newWidth = window.innerWidth * 0.9; // 画面幅の90%
+            let newHeight = newWidth / aspectRatio;
+
+            if (newHeight > window.innerHeight * 0.8) { // 画面高さの80%を超えないように
+                newHeight = window.innerHeight * 0.8;
+                newWidth = newHeight * aspectRatio;
+            }
+
+            gameContainer.style.width = `${newWidth + 40}px`; // パディング分を考慮
+            gameContainer.style.height = `${newHeight + 70}px`; // UIパネル分を考慮
+
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+        });
+
+        // 初期リサイズ調整
+        window.dispatchEvent(new Event('resize'));
+
+    </script>
+</body>
+</html>
